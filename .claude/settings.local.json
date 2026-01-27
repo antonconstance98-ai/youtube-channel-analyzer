@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import ast; [ast.parse\\(open\\(f\\).read\\(\\)\\) for f in [''prompts.py'', ''llm_processor.py'', ''transcript_processor.py'', ''app.py'']]; print\\(''All files parse OK''\\)\")",
+      "Bash(python -c:*)",
+      "Bash(python app.py:*)",
+      "Bash(timeout:*)",
+      "Bash(curl:*)",
+      "Bash(ping:*)",
+      "Bash(dir /b \"C:\\\\Ecum\\\\Cum App\\\\output\")",
+      "Bash(findstr:*)",
+      "Bash(sort:*)",
+      "Bash(for d in \"C:\\\\Ecum\\\\Cum App\\\\output\"/*/)",
+      "Bash(do if ls \"$d\")",
+      "Bash(then echo \"$d\")",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(tasklist /FI \"IMAGENAME eq python.exe\" /FO TABLE)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill:*)",
+      "Bash(powershell -Command \"\\(Invoke-WebRequest -Uri http://localhost:5000/ -TimeoutSec 5\\).Content\")",
+      "Bash(powershell -Command \"try { $r = Invoke-WebRequest -Uri ''http://localhost:5000/'' -TimeoutSec 5; if \\($r.Content -match ''videoSelectionSection''\\) { Write-Output ''NEW HTML CONFIRMED'' } else { Write-Output ''OLD HTML'' } } catch { Write-Output ''ERROR: '' + $_Exception.Message }\")",
+      "Bash(winget install:*)",
+      "Bash(powershell:*)",
+      "Bash(pip install:*)",
+      "Bash(python -m pip install:*)",
+      "Bash(python -m pyngrok:*)",
+      "Bash(dir \"C:\\\\Ecum\\\\Cum App\" /s /b)",
+      "Bash(gh auth status:*)",
+      "Bash(git --version:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}

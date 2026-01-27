@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Channel Analyzer</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M24 4L4 14v20l20 10 20-10V14L24 4z" stroke="url(#grad1)" stroke-width="2" fill="none" />
+                    <path d="M24 14v20M14 19l10 5 10-5" stroke="url(#grad1)" stroke-width="2" />
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#a855f7" />
+                            <stop offset="100%" style="stop-color:#06b6d4" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+                <div class="logo-text">
+                    <h1>YouTube Channel Analyzer</h1>
+                    <p class="tagline">Extract transcripts for Claude Projects</p>
+                </div>
+            </div>
+            <a href="/logout" class="logout-link" title="Sign out" style="font-size:0.8rem;color:var(--text-muted);text-decoration:none;padding:6px 12px;border:1px solid var(--border-color);border-radius:var(--radius-sm);transition:all 0.2s ease;">Logout</a>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Input Section -->
+            <section class="input-section glass-card">
+                <div class="input-row">
+                    <div class="input-group url-input">
+                        <input type="text" id="channelUrl" placeholder="https://youtube.com/@channelname"
+                            autocomplete="off">
+                    </div>
+                    <div class="input-group max-videos">
+                        <label for="maxVideos">Max videos</label>
+                        <input type="number" id="maxVideos" value="200" min="1" max="1000">
+                    </div>
+                </div>
+                <!-- Checkbox with tooltip -->
+                <div class="input-group checkbox-group">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="processTranscripts" checked>
+                        <span class="checkmark"></span>
+                        <span class="checkbox-label">Generate Claude Knowledge Files</span>
+                        <span class="tooltip-trigger" tabindex="0">?
+                            <span class="tooltip-content">
+                                <strong>With this enabled:</strong> Each video transcript is processed by an AI to extract key insights, claims, and frameworks into structured knowledge cards. A channel-level synthesis (knowledge map, speaker profile, glossary) is also generated. This produces files optimized for Claude Projects context.
+                                <br><br>
+                                <strong>Without this:</strong> Only raw transcripts and metadata are downloaded. Faster, but you won't get structured knowledge files.
+                            </span>
+                        </span>
+                    </label>
+                </div>
+                <button id="startBtn" class="start-btn" onclick="handleStart()">
+                    <span class="btn-text">Fetch Videos</span>
+                    <span class="btn-icon">&#8594;</span>
+                </button>
+            </section>
+
+            <!-- Video Selection Section (hidden by default) -->
+            <section id="videoSelectionSection" class="video-selection-section glass-card hidden">
+                <div class="selection-header">
+                    <div class="selection-info">
+                        <h2 id="selectionChannelName">Channel</h2>
+                        <p id="selectionVideoCount">0 videos found</p>
+                    </div>
+                    <div class="selection-controls">
+                        <button class="select-action-btn" onclick="selectAllVideos()">Select All</button>
+                        <button class="select-action-btn" onclick="deselectAllVideos()">Deselect All</button>
+                        <span class="selected-counter" id="selectedCounter">0 selected</span>
+                    </div>
+                </div>
+                <div class="video-list" id="videoList"></div>
+                <div class="selection-footer">
+                    <button class="start-btn" id="startProcessingBtn" onclick="startProcessing()">
+                        <span class="btn-text">Start Export</span>
+                        <span class="btn-icon">&#8594;</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Progress Section (hidden by default) -->
+            <section id="progressSection" class="progress-section hidden">
+                <div class="progress-grid">
+                    <!-- Channel Info Card -->
+                    <div class="channel-card glass-card">
+                        <div class="channel-avatar">
+                            <span id="channelInitial">?</span>
+                        </div>
+                        <div class="channel-info">
+                            <h2 id="channelName">Loading...</h2>
+                            <p id="videoCount">0 videos</p>
+                        </div>
+                        <div class="progress-stats">
+                            <div class="stat">
+                                <span class="stat-value" id="savedCount">0</span>
+                                <span class="stat-label">saved</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-value" id="skippedCount">0</span>
+                                <span class="stat-label">skipped</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar Card (Phase 1: Transcripts) -->
+                    <div class="progress-card glass-card">
+                        <div class="progress-header">
+                            <span id="progressText">0/0 videos processed</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="progressBar"></div>
+                        </div>
+                        <p class="status-text" id="statusText">Initializing...</p>
+                    </div>
+
+                    <!-- LLM Progress Card (Phase 2: Knowledge Files) - hidden until needed -->
+                    <div id="llmProgressCard" class="progress-card glass-card hidden">
+                        <div class="llm-progress-header">
+                            <span class="llm-phase-label">Knowledge File Generation</span>
+                            <button id="skipBtn" class="skip-btn" onclick="skipCurrentVideo()">Skip Current Video</button>
+                        </div>
+                        <div class="progress-header">
+                            <span id="llmProgressText">0/0 knowledge cards</span>
+                            <span id="llmProgressPercent">0%</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar llm-progress-bar" id="llmProgressBar"></div>
+                        </div>
+                        <p class="status-text" id="llmStatusText">Waiting...</p>
+                    </div>
+
+                    <!-- Log Card -->
+                    <div class="log-card glass-card">
+                        <div class="log-header">
+                            <span>Activity Log</span>
+                            <button class="clear-log-btn" onclick="clearLog()">Clear</button>
+                        </div>
+                        <div class="log-content" id="logContent"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Completion Section (hidden by default) -->
+            <section id="completionBanner" class="completion-section glass-card hidden">
+                <div class="completion-hero">
+                    <div class="completion-checkmark">
+                        <svg viewBox="0 0 52 52" fill="none">
+                            <circle cx="26" cy="26" r="25" stroke="#22c55e" stroke-width="2" />
+                            <path d="M14 27l8 8 16-16" stroke="#22c55e" stroke-width="3" stroke-linecap="round"
+                                stroke-linejoin="round" />
+                        </svg>
+                    </div>
+                    <h2 class="completion-title">Export Complete!</h2>
+                    <p class="completion-subtitle">
+                        <strong id="completedChannel"></strong> is ready for Claude Projects
+                    </p>
+                </div>
+                <div class="completion-stats-grid">
+                    <div class="completion-stat">
+                        <span class="completion-stat-value" id="finalTotal">0</span>
+                        <span class="completion-stat-label">videos processed</span>
+                    </div>
+                    <div class="completion-stat">
+                        <span class="completion-stat-value" id="finalSaved">0</span>
+                        <span class="completion-stat-label">transcripts saved</span>
+                    </div>
+                    <div class="completion-stat">
+                        <span class="completion-stat-value" id="finalSkipped">0</span>
+                        <span class="completion-stat-label">skipped</span>
+                    </div>
+                    <div class="completion-stat" id="finalCardsContainer" style="display:none;">
+                        <span class="completion-stat-value" id="finalCards">0</span>
+                        <span class="completion-stat-label">knowledge cards</span>
+                    </div>
+                </div>
+                <div class="completion-actions">
+                    <a id="downloadBtn" href="#" class="download-hero-btn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 3v10m0 0l-4-4m4 4l4-4M3 15v2h14v-2" stroke="currentColor" stroke-width="1.5"
+                                stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <span>Download ZIP</span>
+                    </a>
+                    <button class="new-export-btn" onclick="resetApp()">New Export</button>
+                </div>
+                <p class="completion-hint">Upload the ZIP directly into a Claude Project as context files.</p>
+            </section>
+
+            <!-- Warning Banner (hidden by default) -->
+            <section id="warningBanner" class="warning-banner glass-card hidden">
+                <div class="warning-icon">&#9888;&#65039;</div>
+                <div class="warning-content">
+                    <h3>YouTube Access Warning</h3>
+                    <p id="warningText">YouTube may be blocking requests. Some videos may be skipped.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
