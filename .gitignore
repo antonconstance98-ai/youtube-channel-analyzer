@@ -8,9 +8,13 @@ __pycache__/
 *.egg-info/
 dist/
 build/
+venv/
+.venv/
 
-# Output data
+# Output & runtime data
 output/
+staging/
+*.log
 
 # IDE
 .vscode/

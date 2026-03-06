@@ -9,7 +9,6 @@ import json
 import time
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
 
 import scrapetube
@@ -75,7 +74,8 @@ def get_channel_videos(channel_url: str, max_videos: int = 200) -> List[Dict[str
         List of video dictionaries with id, title, and metadata
     """
     videos = []
-    
+    video_generator = None
+
     # scrapetube can handle different URL formats
     # Extract channel identifier from URL
     if "/@" in channel_url:
@@ -96,8 +96,9 @@ def get_channel_videos(channel_url: str, max_videos: int = 200) -> List[Dict[str
         if match:
             channel_name = match.group(1)
             video_generator = scrapetube.get_channel(channel_url=channel_url)
-    else:
-        # Try as direct channel URL
+
+    # Fallback for unrecognized formats or failed regex matches
+    if video_generator is None:
         video_generator = scrapetube.get_channel(channel_url=channel_url)
     
     count = 0
@@ -334,21 +335,17 @@ def export_channel(channel_url: str, output_dir: str = "output", max_videos: int
     # Track results
     transcripts_saved = 0
     skipped_videos = []
-    results_lock = threading.Lock()
-    completed_count = 0
 
-    # Create shared HTTP session per worker (sessions aren't thread-safe)
-    def fetch_and_save(args):
-        nonlocal transcripts_saved, completed_count
-        i, video = args
+    # Process videos sequentially to respect rate limiting
+    total = len(videos)
+    http_session = _create_http_session()
+
+    for i, video in enumerate(videos, 1):
         video_id = video['video_id']
         title = video['title']
 
-        # Each thread gets its own session for thread safety
-        local_session = _create_http_session()
-
         # Get transcript
-        transcript = get_transcript(video_id, http_session=local_session)
+        transcript = get_transcript(video_id, http_session=http_session)
 
         # Create file prefix with zero-padded number
         prefix = f"{i:03d}"
@@ -388,25 +385,16 @@ VIEWS: {video['view_count_text']}
             with open(transcript_file, 'w', encoding='utf-8') as f:
                 f.write(transcript_content)
 
-            with results_lock:
-                transcripts_saved += 1
+            transcripts_saved += 1
         else:
-            with results_lock:
-                skipped_videos.append({
-                    'title': title,
-                    'url': f"https://youtube.com/watch?v={video_id}"
-                })
+            skipped_videos.append({
+                'title': title,
+                'url': f"https://youtube.com/watch?v={video_id}"
+            })
 
-        with results_lock:
-            completed_count += 1
-            progress = int((completed_count / total) * 50)
-            bar = '=' * progress + '>' + ' ' * (50 - progress - 1)
-            print(f"\r[{bar}] {completed_count}/{total} videos processed", end='', flush=True)
-
-    # Process videos with parallel workers
-    total = len(videos)
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        executor.map(fetch_and_save, enumerate(videos, 1))
+        progress = int((i / total) * 50)
+        bar = '=' * progress + '>' + ' ' * (50 - progress - 1)
+        print(f"\r[{bar}] {i}/{total} videos processed", end='', flush=True)
 
     print()  # New line after progress bar
     

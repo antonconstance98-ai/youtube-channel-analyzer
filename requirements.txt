@@ -3,3 +3,4 @@ scrapetube
 flask
 anthropic
 python-dotenv
+pymupdf
